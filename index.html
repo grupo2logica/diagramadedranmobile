@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Diagrama de Dran</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+
+    <style>
+        *{
+            box-sizing:border-box;
+            -webkit-tap-highlight-color:transparent;
+        }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden; /* Impede que a tela dance para os lados no celular */
+            overflow-y: auto;   /* Força e garante a rolagem vertical padrão */
+            background:#000;
+            margin:0;
+            padding:0;
+        }
+
+        body{
+            padding:10px;
+            color:white;
+            font-family:'Segoe UI',sans-serif;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            min-height:100vh;
+        }
+
+        .container{
+            width:100%;
+            max-width:1250px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:18px;
+            justify-content:center;
+            background:#111;
+            border:1px solid #2a2a2a;
+            border-radius:18px;
+            padding:15px;
+            box-shadow:0 0 30px rgba(0,0,0,.8);
+        }
+
+        #canvas-container{
+            flex:1 1 500px;
+            max-width: 100%;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            position:relative;
+            margin: 0 auto;
+        }
+
+        /* Aplica o travamento de gestos padrão APENAS no canvas criado pelo p5.js */
+        #canvas-container canvas {
+            touch-action: none;
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        .canvas-title{
+            position:absolute;
+            top:10px;
+            left:50%;
+            transform:translateX(-50%);
+            z-index:20;
+            pointer-events:none;
+            font-size:22px;
+            font-weight:bold;
+            color:#fff;
+            text-shadow:0 0 10px rgba(0,0,0,.9);
+            white-space: nowrap;
+        }
+
+        #controls{
+            flex:1 1 340px;
+            max-width:360px;
+            width: 100%;
+            display:flex;
+            flex-direction:column;
+        }
+
+        button{
+            border:none;
+            border-radius:10px;
+            background:#2a2a2a;
+            color:#ddd;
+            font-weight:bold;
+            cursor:pointer;
+            transition:.2s;
+            padding:14px 8px; /* Aumentado ligeiramente para facilitar o clique com o dedo */
+            font-size:15px;
+        }
+
+        button:hover{
+            background:#3a3a3a;
+            color:white;
+        }
+
+        button.active{
+            background:#f1f1f1;
+            color:#000;
+        }
+
+        .btn-group{
+            display:grid;
+            grid-template-columns:repeat(3,1fr);
+            gap:8px;
+            margin-bottom:10px;
+        }
+
+        .conectivos-grid{
+            display:grid;
+            grid-template-columns:repeat(5,1fr);
+            gap:8px;
+            margin-bottom:10px;
+        }
+
+        #btnNegTudo{
+            grid-column:span 5;
+            background:#391414;
+            color:#ff8e8e;
+            font-size: 13px;
+        }
+
+        #btnNegTudo.active{
+            background:#ff6b6b;
+            color:#000;
+        }
+
+        .action-btn{
+            margin-top:8px;
+            width:100%;
+        }
+
+        .btn-registrar{
+            background:#203040;
+        }
+
+        .btn-limpar-diag{
+            background:#802828;
+        }
+
+        .btn-limpar-hist{
+            background:#303030;
+        }
+
+        #expressao-dinamica{
+            margin-top:10px;
+            background:#090909;
+            border:1px solid #2b2b2b;
+            border-radius:10px;
+            padding:14px;
+            min-height:60px;
+            line-height:1.5;
+            font-weight:bold;
+            font-size:15px;
+            text-align: center;
+        }
+
+        #log-area{
+            margin-top:10px;
+            height:200px;
+            overflow-y:auto;
+            background:#050505;
+            border:1px solid #222;
+            border-radius:10px;
+            padding:10px;
+            font-size:13px;
+        }
+
+        .log-item{
+            border-bottom:1px solid #1d1d1d;
+            padding:6px;
+            margin-bottom:8px;
+            user-select:text;
+            pointer-events:auto;
+            cursor:pointer;
+            border-radius:6px;
+            transition: background 0.2s;
+        }
+
+        .log-item:hover{
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .legenda{
+            margin-top:14px;
+            background:#0d0d0d;
+            border:1px solid #232323;
+            border-radius:10px;
+            padding:10px;
+            display:flex;
+            flex-direction:column;
+            gap:8px;
+            font-size:12px;
+            color:#bbb;
+        }
+
+        .dot{
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            display:inline-block;
+            margin-right:5px;
+        }
+
+        .learn-box{
+            margin-top:16px;
+            background:#080808;
+            border:1px solid #222;
+            border-radius:16px;
+            padding:18px;
+        }
+
+        .learn-title{
+            font-weight:bold;
+            color:white;
+            font-size:17px;
+            margin-bottom:18px;
+            padding-left:2px;
+        }
+
+        .learn-grid{
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:12px 18px;
+        }
+
+        .learn-item{
+            background:none;
+            border:none;
+            border-bottom:1px solid #555;
+            border-radius:0;
+            text-align:left;
+            padding:0 0 3px 0;
+            color:#bdbdbd;
+            font-size:13px;
+            font-weight:normal;
+        }
+
+        .learn-item:hover{
+            color:white;
+            background:none;
+        }
+
+        #info-box{
+            display:none;
+            position:fixed;
+            top:50%;
+            left:50%;
+            transform:translate(-50%,-50%);
+            width:360px;
+            max-width:90%;
+            background:#161616;
+            border:1px solid #555;
+            border-radius:14px;
+            padding:20px;
+            z-index:9999;
+            box-shadow:0 0 40px rgba(0,0,0,1);
+        }
+
+        #info-title{
+            display:block;
+            margin-bottom:10px;
+            font-size:18px;
+            color:white;
+        }
+
+        #info-text{
+            color:#ddd;
+            line-height:1.6;
+            font-size:14px;
+            white-space:pre-line;
+        }
+
+        .close-info{
+            position:absolute;
+            top:8px;
+            right:12px;
+            cursor:pointer;
+            font-size:22px;
+            color:#ff7675;
+        }
+
+        /* Regras de Ajuste Fino para Celulares */
+        @media(max-width:850px){
+            .container{
+                flex-direction:column;
+                align-items: center;
+                padding: 10px;
+            }
+            #controls{
+                max-width:100%;
+            }
+            #canvas-container{
+                width: 100%;
+                min-height: auto;
+                margin-bottom: 10px;
+            }
+            .canvas-title{
+                font-size:20px;
+                top: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div id="info-box">
+            <span class="close-info" onclick="fecharInfo()">×</span>
+            <b id="info-title">Título</b>
+            <div id="info-text">Descrição</div>
+        </div>
+
+        <div id="canvas-container">
+            <div class="canvas-title">Diagrama de Dran</div>
+        </div>
+
+        <div id="controls">
+            <div class="btn-group" id="botoes-entradas">
+                <button id="btnP" class="active" onclick="setEntrada('P')">P</button>
+                <button id="btnQ" onclick="setEntrada('Q')">Q</button>
+                <button id="btn¬" onclick="ativarModoNegacao()">¬</button>
+            </div>
+
+            <div class="conectivos-grid">
+                <button id="AND" onclick="setOp('AND')">∧</button>
+                <button id="OR" onclick="setOp('OR')">∨</button>
+                <button id="IF" onclick="setOp('IF')">→</button>
+                <button id="IFF" onclick="setOp('IFF')">↔</button>
+                <button id="XOR" onclick="setOp('XOR')">⊻</button>
+                <button id="btnNegTudo" onclick="negarExpressaoInteira()">¬(Expressão Completa)</button>
+            </div>
+
+            <div id="expressao-dinamica">Nenhuma expressão ativa</div>
+
+            <button class="action-btn btn-registrar" onclick="registrarExpressao()">💾 Registrar Expressão</button>
+            <button class="action-btn btn-limpar-diag" onclick="limparDiagrama()">Limpar Diagrama</button>
+            <button class="action-btn btn-limpar-hist" onclick="limparLogs()">Limpar Histórico</button>
+
+            <div id="log-area">
+                <b>Histórico de Expressões:</b><br>
+            </div>
+
+            <div class="legenda">
+                <span><span class="dot" style="background:#2ecc71;"></span>Trajeto verde = tautologia</span>
+                <span><span class="dot" style="background:#e74c3c;"></span>Trajeto vermelho = contradição</span>
+                <span><span class="dot" style="background:linear-gradient(90deg,#2ecc71 50%,#e74c3c 50%);"></span>Trajeto verde + vermelho = contingência</span>
+            </div>
+
+            <div class="learn-box">
+                <div class="learn-title">Clique para aprender</div>
+                <div class="learn-grid">
+                    <button class="learn-item" onclick="mostrarInfo('Proposições Simples','Uma proposição simples é uma afirmação que possui apenas dois valores lógicos possíveis:\n\nVerdadeiro (V)\nou\nFalso (F).\n\nNo Diagrama de Dran, P e Q representam as proposições simples fundamentais.\n\nCada proposição ocupa uma posição estrutural dentro do diagrama.\n\nOs quadrantes possuem valores lógicos fixos:\n\nQ1 = Verdadeiro\nQ2 = Falso\nQ3 = Verdadeiro\nQ4 = Falso.')">Proposições simples</button>
+                    <button class="learn-item" onclick="mostrarInfo('Conectivos Lógicos','∧  Conjunção (E)\nV apenas quando ambas forem verdadeiras.\n\n∨  Disjunção (OU)\nF apenas quando ambas forem falsas.\n\n→  Condicional\nF apenas quando V → F.\n\n↔  Bicondicional\nV quando ambas possuem o mesmo valor lógico.\n\n⊻  Disjunção Exclusiva\nV quando apenas uma é verdadeira.')">Conectivos</button>
+                    <button class="learn-item" onclick="mostrarInfo('Negações','NEGAR PROPOSIÇÕES SIMPLES:\n\n¬(P) ⇔ ¬P\n\nA negação inverte o valor lógico da proposição.\n\n\nLEI DE MORGAN:\n\n¬(P ∧ Q) ⇔ (¬P ∨ ¬Q)\n\n¬(P ∨ Q) ⇔ (¬P ∧ ¬Q)\n\n\nNEGAÇÃO DA CONDICIONAL:\n\n¬(P → Q) ⇔ (P ∧ ¬Q)\n\n\nNEGAÇÃO DA BICONDICIONAL:\n\n¬(P ↔ Q) ⇔ (P ⊻ Q)\n\n\nNEGAÇÃO DA DISJUNÇÃO EXCLUSIVA:\n\n¬(P ⊻ Q) ⇔ (P ↔ Q)\n\n\nO botão ¬ ativa a negação manual.\n\nO botão ¬(Expressão Completa) aplica automaticamente equivalências estruturais.')">Negações</button>
+                    <button class="learn-item" onclick="mostrarInfo('Camadas do Diagrama','As camadas representam níveis estruturais do diagrama.\n\nA primeira proposição fixa sua posição lógica em uma camada.\n\nA segunda proposição percorre dinamicamente as fatias.\n\nQuando existe espaço interno disponível, o sistema cria automaticamente uma camada inferior invertida para representar todas as combinações possíveis:\n\nVV\nVF\nFV\nFF.\n\nA camada central é reservada para organização estrutural e não pode iniciar proposições.')">Camadas</button>
+                    <button class="learn-item" onclick="mostrarInfo('Botões de Limpeza','Limpar Diagrama:\n\nRemove todas as proposições do diagrama atual.\n\n\nLimpar Histórico:\n\nRemove todas as expressões registradas.')">Botões de limpeza</button>
+                    <button class="learn-item" onclick="mostrarInfo('Registro de Expressões','Registrar Expressão salva a expressão lógica atual no histórico.\n\nArmazene e avalie seus resultados instantaneamente na listagem.')">Registro de expressões</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fatias = 4;
+        let camadas = 8;
+        let raioMax;
+        let operacao = "AND";
+        let conectivoSelecionado = false;
+        let entradaAtiva = "P";
+        let pontos = {};
+        let ordemCliques = [];
+        let historicoResultados = [];
+        let camadaObrigatoria = -1;
+        let negarGeral = false;
+        let modoNegacaoManual = false;
+        let previewMouseX = 0;
+        let previewMouseY = 0;
+        const CAMADA_CENTRAL = 1;
+        let tooltipExpressao;
+
+        // NOVAS VARIÁVEIS DO TOQUE (ADICIONADAS AQUI)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let limiteMovimentoTouch = 10; 
+
+        function setup(){
+            let canvasSize = min(windowWidth - 30, 600);
+            let canvas = createCanvas(canvasSize, canvasSize);
+            canvas.parent("canvas-container");
+
+            textAlign(CENTER, CENTER);
+            raioMax = (width / 2) * 0.85;
+
+            tooltipExpressao = document.createElement("div");
+            tooltipExpressao.style.position = "absolute";
+            tooltipExpressao.style.pointerEvents = "none";
+            tooltipExpressao.style.backgroundColor = "rgba(15, 15, 15, 0.95)";
+            tooltipExpressao.style.border = "2px solid #555";
+            tooltipExpressao.style.padding = "8px 12px";
+            tooltipExpressao.style.borderRadius = "6px";
+            tooltipExpressao.style.color = "#fff";
+            tooltipExpressao.style.fontFamily = "monospace";
+            tooltipExpressao.style.fontSize = "14px";
+            tooltipExpressao.style.fontWeight = "bold";
+            tooltipExpressao.style.boxShadow = "0px 4px 10px rgba(0,0,0,0.5)";
+            tooltipExpressao.style.display = "none";
+            tooltipExpressao.style.zIndex = "9999";
+            document.body.appendChild(tooltipExpressao);
+
+            atualizarUI();
+            configurarEventosHistorico();
+        }
+
+        function draw(){
+            background(8);
+            translate(width / 2, height / 2);
+
+            desenharResultado();
+            desenharPreview();
+            desenharPontos();
+            desenharGrade();
+
+            gerenciarBalaoFlutuante();
+        }
+
+        function atualizarUI(){
+            document.querySelectorAll("button").forEach(btn => {
+                btn.classList.remove("active");
+            });
+
+            if(modoNegacaoManual){
+                let btnNeg = document.getElementById("btn¬");
+                if(btnNeg) btnNeg.classList.add("active");
+            } else {
+                let btnLetra = document.getElementById("btn" + entradaAtiva);
+                if(btnLetra) btnLetra.classList.add("active");
+            }
+
+            if(conectivoSelecionado && operacao) {
+                let op = document.getElementById(operacao);
+                if(op) op.classList.add("active");
+            }
+
+            let btnNegTudo = document.getElementById("btnNegTudo");
+            if(btnNegTudo){
+                btnNegTudo.classList.toggle("active", negarGeral);
+            }
+
+            atualizarTexto();
+        }
+
+        function atualizarTexto(){
+            let box = document.getElementById("expressao-dinamica");
+            if(!box) return;
+
+            if(ordemCliques.length === 0){
+                box.innerHTML = "Nenhuma expressão ativa";
+                return;
+            }
+
+            let id1 = ordemCliques[0];
+            let fatiaBase = pontos[id1].f;
+            let camadaBase = pontos[id1].c;
+
+            if(ordemCliques.length >= 2) {
+                let id2 = ordemCliques[1];
+                fatiaBase = pontos[id2].f; 
+            }
+
+            box.innerHTML = obterExpressaoHTMLColorida(fatiaBase, camadaBase, false);
+        }
+
+        function setEntrada(letra) {
+            if (letra === "r" || letra === "s" || letra === "R" || letra === "S") return;
+            modoNegacaoManual = false; 
+            entradaAtiva = letra;
+            atualizarUI();
+        }
+
+        function setOp(op){
+            if(ordemCliques.length === 1 && operacao === op) {
+                conectivoSelecionado = !conectivoSelecionado;
+            } else {
+                operacao = op;
+                conectivoSelecionado = true;
+            }
+            atualizarUI();
+        }
+
+        function ativarModoNegacao(){
+            modoNegacaoManual = !modoNegacaoManual;
+            if(modoNegacaoManual) {
+                entradaAtiva = "";
+            } else {
+                entradaAtiva = ordemCliques.length === 1 ? ordemCliques[0] : "P";
+            }
+            atualizarUI();
+        }
+
+        function limparDiagrama(){
+            pontos = {};
+            ordemCliques = [];
+            camadaObrigatoria = -1;
+            negarGeral = false;
+            modoNegacaoManual = false;
+            entradaAtiva = "P";
+            operacao = "AND";
+            conectivoSelecionado = false;
+            tooltipExpressao.style.display = "none";
+            atualizarUI();
+        }
+
+        function limparLogs(){
+            historicoResultados = [];
+            let logArea = document.getElementById("log-area");
+            if(logArea){
+                logArea.innerHTML = "<b>Histórico de Expressões:</b><br>";
+            }
+        }
+
+        function getValorLogicoFatia(f){
+            let ang = (TWO_PI / fatias) * (f + 0.5);
+            let x = cos(ang);
+            let y = sin(ang);
+            if(x >= 0 && y <= 0) return true;
+            if(x < 0 && y <= 0) return false;
+            if(x < 0 && y > 0) return true;
+            return false;
+        }
+
+        function getValorLogicoQuadrante(f){
+            let ang = (TWO_PI / fatias) * (f + 0.5);
+            let x = cos(ang);
+            let y = sin(ang);
+            if(x >= 0 && y <= 0) return "Q1";
+            if(x < 0 && y <= 0) return "Q2";
+            if(x < 0 && y > 0) return "Q3";
+            return "Q4";
+        }
+
+        function existeProposicaoNoQuadrante(fatia){
+            let quadrante = getValorLogicoQuadrante(fatia);
+            for(let id in pontos){
+                let q = getValorLogicoQuadrante(pontos[id].f);
+                if(q === quadrante) return true;
+            }
+            return false;
+        }
+
+        function calcularOperacao(a, b, op){
+            switch(op){
+                case "AND": return a && b;
+                case "OR":  return a || b;
+                case "IF":  return (!a || b);
+                case "IFF": return a === b;
+                case "XOR": return a !== b;
+            }
+            return false;
+        }
+
+        function obterValoresUnarios(id1, fatiaBase){
+            let pontoNegado = id1.startsWith("¬");
+            let valorBase = getValorLogicoFatia(fatiaBase);
+            let valorA; let valorB;
+
+            if(!modoNegacaoManual && !pontoNegado){
+                valorA = valorBase; valorB = valorBase;
+            } else if(!modoNegacaoManual && pontoNegado){
+                valorA = valorBase; valorB = valorBase;
+            } else if(modoNegacaoManual && !pontoNegado){
+                valorA = valorBase; valorB = !valorBase;
+            } else {
+                valorA = valorBase; valorB = !valorBase;
+            }
+            return { valorA, valorB };
+        }
+
+        function calcularValorSemanticoExpressao(){
+            if(ordemCliques.length === 0) return false;
+            let id1 = ordemCliques[0];
+            let ponto1 = pontos[id1];
+
+            if(ordemCliques.length === 1){
+                if(!conectivoSelecionado) {
+                    let valorPuro = getValorLogicoFatia(ponto1.f);
+                    if(negarGeral) valorPuro = !valorPuro;
+                    return valorPuro;
+                }
+                let valores = obterValoresUnarios(id1, ponto1.f);
+                let r = calcularOperacao(valores.valorA, valores.valorB, operacao);
+                if(negarGeral) r = !r;
+                return r;
+            }
+
+            let id2 = ordemCliques[1];
+            let v1 = getValorLogicoFatia(ponto1.f);
+            let v2 = getValorLogicoFatia(pontos[id2].f);
+            let r = calcularOperacao(v1, v2, operacao);
+            if(negarGeral) r = !r;
+            return r;
+        }
+
+        function desenharResultado(){
+            if(ordemCliques.length < 1) return;
+            let id1 = ordemCliques[0];
+            let camadaBase = pontos[id1].c;
+
+            desenharCamada(camadaBase, false);
+            if(camadaBase > CAMADA_CENTRAL && ordemCliques.length >= 2){
+                desenharCamada(camadaBase - 1, true);
+            }
+        }
+
+        function desenharCamada(camada, inverterPrimeira){
+            if(camada <= 0) return;
+            for(let f = 0; f < fatias; f++){
+                let r = calcularResultadoEstrutural(f, inverterPrimeira);
+                fill(r ? color(46, 204, 113, 220) : color(231, 76, 60, 220));
+                noStroke();
+                drawCasa(f, camada);
+            }
+        }
+
+        function calcularResultadoEstrutural(fatiaAtual, inverterPrimeira){
+            let id1 = ordemCliques[0];
+            if(ordemCliques.length === 1){
+                if(!conectivoSelecionado) {
+                    let rPuro = getValorLogicoFatia(fatiaAtual);
+                    if(negarGeral) rPuro = !rPuro;
+                    return rPuro;
+                }
+                let valores = obterValoresUnarios(id1, fatiaAtual);
+                let r = calcularOperacao(valores.valorA, valores.valorB, operacao);
+                if(negarGeral) r = !r;
+                return r;
+            }
+
+            let valorA = getValorLogicoFatia(pontos[id1].f);
+            if(inverterPrimeira) valorA = !valorA;
+            let valorB = getValorLogicoFatia(fatiaAtual);
+            let r = calcularOperacao(valorA, valorB, operacao);
+            if(negarGeral) r = !r;
+            return r;
+        }
+
+        function obterExpressaoHTMLColorida(fatiaAtual, camadaAtual, isSegundaCamadaInterna) {
+            if(ordemCliques.length === 0) return "";
+            let id1 = ordemCliques[0];
+            let corVerde = "#2ecc71";
+            let corVermelha = "#e74c3c";
+            let mapaComposta = { AND: "∧", OR: "∨", IF: "→", IFF: "↔", XOR: "⊻" };
+
+            let isInterna = (camadaAtual === 2 || isSegundaCamadaInterna);
+            let p1 = pontos[id1];
+            let p1EstaNegado = id1.startsWith("¬") || (p1 && p1.fFalsaOrigem !== undefined && p1.negarGeralOrigem);
+            let letraBaseP = id1.replace("¬", "").toLowerCase();
+            let rotuloP = p1EstaNegado ? `¬${letraBaseP}` : letraBaseP;
+
+            let opAtual = operacao;
+            let negGeralAtual = negarGeral;
+            let temConectivo = conectivoSelecionado;
+
+            if(ordemCliques.length === 1){
+                if(!temConectivo) {
+                    let pVal = getValorLogicoFatia(fatiaAtual);
+                    let valorFinal = pVal;
+                    if(negGeralAtual) valorFinal = !valorFinal;
+                    let corP = pVal ? corVerde : corVermelha;
+                    let corEstrutura = valorFinal ? corVerde : corVermelha;
+                    return `<span style="color:${corEstrutura}">${negGeralAtual ? '¬' : ''}</span><span style="color:${corP}">${rotuloP}</span><span style="color:${corEstrutura}"> = ${valorFinal ? 'V' : 'F'}</span>`;
+                }
+
+                let valores = obterValoresUnarios(id1, fatiaAtual);
+                let r = calcularOperacao(valores.valorA, valores.valorB, opAtual);
+                if(negGeralAtual) r = !r;
+
+                let corA = valores.valorA ? corVerde : corVermelha;
+                let corB = valores.valorB ? corVerde : corVermelha;
+                let corOp = r ? corVerde : corVermelha;
+                let opSimbolo = mapaComposta[opAtual] || " ";
+
+                let termoA = rotuloP;
+                let termoB = rotuloP;
+                if (modoNegacaoManual) {
+                    termoB = id1.startsWith("¬") ? letraBaseP : "¬" + rotuloP;
+                }
+
+                let str = `<span style="color:${corOp}">[</span><span style="color:${corA}">${termoA}</span><span style="color:${corOp}"> ${opSimbolo} </span><span style="color:${corB}">${termoB}</span><span style="color:${corOp}">] = ${r ? 'V' : 'F'}</span>`;
+                if(negGeralAtual) str = `<span style="color:${corOp}">¬</span>` + str;
+                return str;
+            }
+
+            let id2 = ordemCliques[1];
+            let p2 = pontos[id2];
+            if (!p2) return "";
+
+            let p2EstaNegado = id2.startsWith("¬");
+            let letraBaseQ = id2.replace("¬", "").toLowerCase();
+            let rotuloQ = p2EstaNegado ? `¬${letraBaseQ}` : letraBaseQ;
+            let opSimbolo = mapaComposta[opAtual] || " ";
+
+            let pVal, qVal;
+            if (!isInterna) {
+                pVal = getValorLogicoFatia(p1.f);
+                qVal = getValorLogicoFatia(fatiaAtual);
+            } else {
+                pVal = !getValorLogicoFatia(p1.f);
+                qVal = getValorLogicoFatia(fatiaAtual);
+            }
+
+            let r = calcularOperacao(pVal, qVal, opAtual);
+            if(negGeralAtual) r = !r;
+
+            let corA = pVal ? corVerde : corVermelha;
+            let corB = qVal ? corVerde : corVermelha;
+            let corOp = r ? corVerde : corVermelha;
+
+            let str = `<span style="color:${corOp}">(</span><span style="color:${corA}">${rotuloP}</span><span style="color:${corOp}"> ${opSimbolo} </span><span style="color:${corB}">${rotuloQ}</span><span style="color:${corOp}?) = ${r ? 'V' : 'F'}</span>`;
+            if(negGeralAtual) str = `<span style="color:${corOp}">¬</span>` + str;
+            return str;
+        }
+
+        function gerenciarBalaoFlutuante() {
+            if (ordemCliques.length === 0) {
+                tooltipExpressao.style.display = "none";
+                return;
+            }
+
+            let mx = mouseX - width / 2;
+            let my = mouseY - height / 2;
+            let d = dist(mx, my, 0, 0);
+
+            if (d > raioMax || d < 10) {
+                tooltipExpressao.style.display = "none";
+                return;
+            }
+
+            let c = ceil(d / (raioMax / camadas));
+            let f = floor(((atan2(my, mx) + TWO_PI) % TWO_PI) / (TWO_PI / fatias));
+
+            let id1 = ordemCliques[0];
+            let camadaBase = pontos[id1].c;
+            let isSegundaCamadaAtiva = (camadaBase > CAMADA_CENTRAL && c === (camadaBase - 1) && ordemCliques.length >= 2);
+
+            if (c === camadaBase || isSegundaCamadaAtiva || (ordemCliques.length === 1 && !conectivoSelecionado)) {
+                tooltipExpressao.innerHTML = obterExpressaoHTMLColorida(f, isSegundaCamadaAtiva ? 2 : 1, isSegundaCamadaAtiva);
+                tooltipExpressao.style.display = "block";
+                
+                let canvasBounding = document.querySelector("canvas").getBoundingClientRect();
+                tooltipExpressao.style.left = `${window.scrollX + canvasBounding.left + mouseX + 15}px`;
+                tooltipExpressao.style.top = `${window.scrollY + canvasBounding.top + mouseY + 15}px`;
+            } else {
+                tooltipExpressao.style.display = "none";
+            }
+        }
+
+        function desenharPreview(){
+            if(ordemCliques.length >= 2) return;
+            if(typeof entradaAtiva === "string" && entradaAtiva.length === 1 && entradaAtiva === entradaAtiva.toLowerCase()){
+                for(let id in pontos){
+                    let nomeBase = id.replace("¬", "");
+                    if(nomeBase === entradaAtiva) return;
+                }
+            }
+
+            let mx = mouseX - width / 2;
+            let my = mouseY - height / 2;
+            let d = dist(mx, my, 0, 0);
+            if(d > raioMax) return;
+
+            let camada = (camadaObrigatoria === -1) ? ceil(d / (raioMax / camadas)) : camadaObrigatoria;
+            if(camada !== 8) return;
+
+            let alpha = map(sin(frameCount * 0.12), -1, 1, 20, 120);
+            noStroke();
+            fill(125, 60, 255, alpha);
+
+            for(let f = 0; f < fatias; f++){
+                if(existeProposicaoNoQuadrante(f)) continue;
+                drawCasa(f, camada);
+            }
+        }
+
+        function drawCasa(f, c){
+            let ang = TWO_PI / fatias;
+            let a1 = ang * f; let a2 = a1 + ang;
+            let r1 = (raioMax / camadas) * (c - 1);
+            let r2 = (raioMax / camadas) * c;
+
+            beginShape();
+            for(let a = a1; a <= a2; a += 0.01) vertex(cos(a) * r2, sin(a) * r2);
+            for(let a = a2; a >= a1; a -= 0.01) vertex(cos(a) * r1, sin(a) * r1);
+            endShape(CLOSE);
+        }
+
+        function desenharGrade(){
+            stroke(50); strokeWeight(1); noFill();
+            for(let i = 1; i <= camadas; i++){
+                ellipse(0, 0, (raioMax / camadas) * i * 2);
+            }
+            for(let i = 0; i < fatias; i++){
+                let a = (TWO_PI / fatias) * i;
+                line(0, 0, cos(a) * raioMax, sin(a) * raioMax);
+            }
+
+            stroke(120); strokeWeight(2);
+            line(-raioMax, 0, raioMax, 0); line(0, -raioMax, 0, raioMax);
+
+            fill(255); noStroke(); textStyle(BOLD); textSize(width * 0.07);
+            let off = raioMax * 0.8;
+            text("V", off, -off); text("F", -off, -off);
+            text("V", -off, off);  text("F", off, off);
+        }
+
+        function desenharPontos(){
+            for(let id in pontos){
+                let p = pontos[id];
+                let ang = (TWO_PI / fatias) * (p.f + 0.5);
+                let r = (raioMax / camadas) * (p.c - 0.5);
+                fill(255); noStroke(); textStyle(BOLD); textSize(width * 0.04);
+                text(id, cos(ang) * r, sin(ang) * r);
+            }
+        }
+
+        // FUNÇÕES DE EVENTOS (SUBSTITUÍDAS E CORRIGIDAS ABAIXO)
+        function mouseMoved(){
+            previewMouseX = mouseX; previewMouseY = mouseY;
+        } 
+
+        function touchMoved(){
+            if(touches.length > 0){
+                previewMouseX = touches[0].x;
+                previewMouseY = touches[0].y;
+            }
+            return true; // PERMITE ROLAGEM NORMAL SE ARRASTAR O DEDO
+        }
+
+        function mousePressed(){
+            handleInteracao(mouseX, mouseY);
+            return false;
+        }
+
+        function touchStarted(){
+            if(touches.length > 0){
+                touchStartX = touches[0].x;
+                touchStartY = touches[0].y;
+            }
+            return true; // NÃO TRAVA A TELA NO INÍCIO DO TOQUE
+        }
+
+        function touchEnded(){
+            // Só dispara clique se o usuário deu um toque rápido (sem arrastar)
+            if(touches.length === 0 && p5.prototype.touchX !== undefined){
+                let mudancaX = abs(p5.prototype.touchX - touchStartX);
+                let mudancaY = abs(p5.prototype.touchY - touchStartY);
+                
+                if(mudancaX < limiteMovimentoTouch && mudancaY < limiteMovimentoTouch){
+                    handleInteracao(touchStartX, touchStartY);
+                }
+            }
+            return true;
+        }
+
+        function handleInteracao(xIn, yIn){
+            let mx = xIn - width / 2;
+            let my = yIn - height / 2;
+            let d = dist(mx, my, 0, 0);
+
+            if(d > raioMax || d < 10) return;
+
+            let c = ceil(d / (raioMax / camadas));
+            if(c !== 8) return;
+
+            let f = floor(((atan2(my, mx) + TWO_PI) % TWO_PI) / (TWO_PI / fatias));
+
+            if(modoNegacaoManual){
+                for(let id in pontos){
+                    let p = pontos[id];
+                    if(p.f === f && p.c === c){
+                        inverterPonto(id);
+                        atualizarCamadasPorProposicoesSimples(); 
+                        atualizarUI();
+                        return;
+                    }
+                }
+                return;
+            }
+
+            for(let id in pontos){
+                let p = pontos[id];
+                if(p.f === f && p.c === c){
+                    delete pontos[id];
+                    ordemCliques = ordemCliques.filter(x => x !== id);
+                    if(ordemCliques.length === 0){
+                        camadaObrigatoria = -1;
+                        conectivoSelecionado = false;
+                        entradaAtiva = "P"; 
+                    }
+                    atualizarCamadasPorProposicoesSimples(); 
+                    atualizarUI();
+                    return;
+                }
+            }
+
+            for(let id in pontos){
+                let nomeBase = id.replace("¬", "");
+                if(nomeBase === entradaAtiva) return;
+            }
+
+            if(ordemCliques.length === 0) { camadaObrigatoria = 8; }
+            if(ordemCliques.length === 1 && c !== camadaObrigatoria) return;
+            if(ordemCliques.length >= 2) return;
+            if(existeProposicaoNoQuadrante(f)) return;
+
+            let label = entradaAtiva;
+            pontos[label] = { f, c: camadaObrigatoria };
+            ordemCliques.push(label);
+
+            if(ordemCliques.length === 2) conectivoSelecionado = true;
+
+            atualizarCamadasPorProposicoesSimples(); 
+            atualizarUI();
+        }
+
+        function inverterPonto(id){
+            let p = pontos[id]; if(!p) return;
+            delete pontos[id];
+
+            let valorAtual = getValorLogicoFatia(p.f);
+            let alvo = !valorAtual;
+            let novaFatia = p.f; let encontrou = false;
+
+            for(let i = 1; i <= fatias; i++){
+                let derecha = (p.f + i) % fatias;
+                if(getValorLogicoFatia(derecha) === alvo){
+                    if(!existeProposicaoNoQuadrante(derecha)){
+                        novaFatia = derecha; encontrou = true; break;
+                    }
+                }
+                let esquerda = (p.f - i + fatias) % fatias;
+                if(getValorLogicoFatia(esquerda) === alvo){
+                    if(!existeProposicaoNoQuadrante(esquerda)){
+                        novaFatia = esquerda; encontrou = true; break;
+                    }
+                }
+            }
+
+            if(!encontrou){ pontos[id] = p; return; }
+
+            let novoID = id.startsWith("¬") ? id.substring(1) : "¬" + id;
+            pontos[novoID] = { f: novaFatia, c: p.c };
+
+            let idx = ordemCliques.indexOf(id);
+            if(idx !== -1) ordemCliques[idx] = novoID;
+        }
+
+        function negarExpressaoInteira(){
+            let distribuiuNegacao = false;
+            if(ordemCliques.length === 1) conectivoSelecionado = true;
+
+            if(operacao === "AND"){
+                operacao = "OR";
+                [...ordemCliques].forEach(id => { inverterPonto(id); });
+                distribuiuNegacao = true;
+            } else if(operacao === "OR"){
+                operacao = "AND";
+                [...ordemCliques].forEach(id => { inverterPonto(id); });
+                distribuiuNegacao = true;
+            } else if(operacao === "IF"){
+                operacao = "AND";
+                if(ordemCliques[1]) inverterPonto(ordemCliques[1]);
+                distribuiuNegacao = true;
+            } else if(operacao === "IFF"){
+                operacao = "XOR"; distribuiuNegacao = true;
+            } else if(operacao === "XOR"){
+                operacao = "IFF"; distribuiuNegacao = true;
+            }
+
+            if(!distribuiuNegacao) negarGeral = !negarGeral;
+            atualizarUI();
+        }
+
+        function registrarExpressao(){
+            if(ordemCliques.length < 1){ alert("Nenhuma expressão ativa."); return; }
+            let id1 = ordemCliques[0];
+
+            if (ordemCliques.length === 1 && !conectivoSelecionado) {
+                alert("Não é possível registrar uma proposição simples isolada. Ative um conectivo ou adicione outro termo.");
+                return;
+            }
+
+            let fatiaBase = pontos[id1].f;
+            let resultadoText = calcularValorSemanticoExpressao() ? "V" : "F";
+            let rotuloAtual = document.getElementById("expressao-dinamica") ? document.getElementById("expressao-dinamica").innerText.split('=')[0].replace(/^[A-Z]\.\s*/, '').trim() : "Expressão";
+
+            let jaExiste = historicoResultados.some(item => item.rotuloOriginal === rotuloAtual && item.valorGlobal === resultadoText);
+            if (jaExiste) { alert("Essa expressão já está registrada!"); return; }
+
+            let letraComposta = String.fromCharCode(65 + historicoResultados.length); 
+            let exprHTML_Historico = obterHTMLFormatadoParaHistorico();
+
+            let novo = {
+                numero: historicoResultados.length + 1,
+                letra: letraComposta,
+                rotuloOriginal: rotuloAtual,
+                textoHTML: exprHTML_Historico,
+                valorGlobal: resultadoText,
+                operacaoOrigem: operacao,
+                fFalsaOrigem: fatiaBase,
+                negarGeralOrigem: negarGeral,
+                camadasSubestrutura: ordemCliques.length >= 2 ? 2 : 1
+            };
+
+            historicoResultados.push(novo);
+
+            let item = document.createElement("div");
+            item.className = "log-item";
+            item.style.padding = "4px";
+            item.style.borderBottom = "1px solid #333";
+            item.innerHTML = `<b>${novo.letra}.</b> ${novo.textoHTML} = <b>${novo.valorGlobal}</b>`;
+            
+            let logArea = document.getElementById("log-area");
+            if(logArea) logArea.appendChild(item);
+        }
+
+        function obterHTMLFormatadoParaHistorico() {
+            let id1 = ordemCliques[0];
+            let corVerde = "#2ecc71"; let corVermelha = "#e74c3c";
+            let mapa = { AND: "∧", OR: "∨", IF: "→", IFF: "↔", XOR: "⊻" };
+            
+            if (ordemCliques.length === 1) {
+                let valorPuro = getValorLogicoFatia(pontos[id1].f);
+                if (negarGeral) valorPuro = !valorPuro;
+                let corComponente = valorPuro ? corVerde : corVermelha;
+                let ex = id1.toLowerCase();
+                if (negarGeral) return `<span style="color:${corComponente}">¬${ex}</span>`;
+                return `<span style="color:${corComponente}">${ex}</span>`;
+            }
+            
+            let id2 = ordemCliques[1];
+            let pVal = getValorLogicoFatia(pontos[id1].f);
+            let qVal = getValorLogicoFatia(pontos[id2].f);
+            let r = calcularOperacao(pVal, qVal, operacao);
+            if(negarGeral) r = !r;
+            
+            let corOp = r ? corVerde : corVermelha;
+            let corP = pVal ? corVerde : corVermelha;
+            let corQ = qVal ? corVerde : corVermelha;
+            let opSimbolo = mapa[operacao] || " ";
+            
+            let baseHTML = `(<span style="color:${corP}">${id1.toLowerCase()}</span> ${opSimbolo} <span style="color:${corQ}">${id2.toLowerCase()}</span>)`;
+            if(negarGeral) baseHTML = `¬` + baseHTML;
+            return `<span style="color:${corOp}">${baseHTML}</span>`;
+        }
+
+        function configurarEventosHistorico() {}
+
+        function atualizarCamadasPorProposicoesSimples() {
+            if (!ordemCliques || ordemCliques.length === 0) { camadaObrigatoria = -1; return; }
+            let unicas = new Set();
+
+            ordemCliques.forEach(id => {
+                let letra = String(id).replace("¬", "").trim().toLowerCase();
+                if (letra.length === 1) { unicas.add(letra); }
+            });
+
+            let n = unicas.size; if (n < 2) n = 2;
+            let resultadoCamadas = Math.pow(2, n - 1);
+
+            ordemCliques.forEach(id => {
+                if (pontos[id]) { pontos[id].camadasSubestrutura = resultadoCamadas; }
+            });
+        }
+
+        function windowResized(){
+            let canvasSize = min(windowWidth - 30, 600);
+            resizeCanvas(canvasSize, canvasSize);
+            raioMax = (width / 2) * 0.85;
+        }
+    </script>
+
+    <script>
+        function mostrarInfo(titulo,texto){
+            document.getElementById('info-title').innerText = titulo;
+            document.getElementById('info-text').innerText = texto;
+            document.getElementById('info-box').style.display = 'block';
+        }
+        function fecharInfo(){
+            document.getElementById('info-box').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
